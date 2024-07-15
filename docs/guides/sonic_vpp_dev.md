@@ -41,7 +41,7 @@ compiledb make
 **Backup the `sonic-sairedis` folder in the `sonic-platform-vpp` project before starting.** Do this outside of any container:
 
 ```sh
-cp $HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/src/sonic-sairedis backups/
+cp $HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/src/sonic-sairedis $HOME/workspace/backups/
 ```
 
 ## 1. Remove the Existing `sonic-sairedis` Folder
@@ -52,9 +52,10 @@ rm -rf sonic-sairedis
 ```
 
 ## 2. Copy the Modified `sonic-sairedis`
-Inside `dockers/dev_container`, run:
+Inside `dockers/dev_container`, run the copy command:
 
 ```sh
+cd $HOME/workspace/sonic-platform-vpp/dockers/dev_container
 make copy_vpplib
 ```
 
@@ -65,7 +66,7 @@ make copy_vpplib
 **Backup the "target" folder:**
 
 ```sh
-cp $HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/target backups/
+cp $HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/target $HOME/workspace/backups/
 ```
 
 ## 1. Enable the VPP Plugin
@@ -86,7 +87,7 @@ It should look similar to this:
 	    "dpdk_plugin.so": "enable",
 	    "linux_cp_plugin.so": "enable",
 	    "linux_nl_plugin.so": "enable",
-		"vxlan_plugin.so": "enable"
+	    "vxlan_plugin.so": "enable"
 	}
 },
 ```
@@ -115,6 +116,7 @@ plugin vxlan_plugin.so { enable }
 From the root of the project (`sonic-platform-vpp`), run:
 
 ```sh
+cd $HOME/workspace/sonic-platform-vpp
 make clean_syncd_dependencies
 make sonic
 ```
@@ -123,6 +125,7 @@ make sonic
 ## 3. Load the Built Docker Image
 
 ```sh
+cd $HOME/workspace/sonic-platform-vpp/build/sonic-buildimage
 docker load < target/docker-sonic-vpp.gz
 ```
 
@@ -136,6 +139,7 @@ curl -sL https://containerlab.dev/setup | sudo bash -s "all"
 ## 5. Clone `vpp-sonic-labs` Repository
 
 ```sh
+cd $HOME/workspace
 git clone https://github.com/Giluerre/vpp-sonic-labs.git
 ```
 
