@@ -69,10 +69,14 @@ RUN apt-get install -y net-tools \
                        libasan6 \
                        {%- endif %}
                        libsystemd0 \
-		       sudo \
-		       gdb \
+                       sudo \
+                       gdb \
                        dbus \
-		       redis-server
+                       redis-server \
+                       # For libkrb5-dev
+                       comerr-dev \
+                       libgssrpc4 \
+                       libkdb5-10
 
 # For sonic-config-engine Python 3 package
 # Install pyangbind here, outside sonic-config-engine dependencies, as pyangbind causes enum34 to be installed.
