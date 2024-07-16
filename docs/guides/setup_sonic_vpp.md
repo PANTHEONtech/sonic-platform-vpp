@@ -23,48 +23,46 @@
    - Help improve Ubuntu **No, don't send system info** (it's a VM)
    - Turn off Location Services and **Done**
    - Go to **Settings -> Privacy -> Screen Lock** and set **Blank Screen Delay** to "Never".
-3. **After Rebooting**:
-   - Drag and drop `manage_dependencies.sh`, `manage_cores.sh` and `prepare_workspace.sh` into the VM (they should appear in the **Downloads** folder).
+3. **Create the sonic-platform-vpp workspace**:
+   - Download `prepare_workspace.sh` from the scripts folder in this project (/docs/guides/scripts)
+   - Drag and drop it into the VM (it should appear in the **Downloads** folder).
    - Right click in the **Downloads** folder and **Open in Terminal**
-   - Run the workspace preparation script: 
-        ```sh
-        chmod +x *.sh
+   - Firstly, we need to install git for the script to work properly:
+		```sh
+        sudo apt install git
+        ```
+   - Now, we can run the workspace preparation script: 
+     ```sh
+        chmod +x prepare_workspace.sh
         ./prepare_workspace.sh
         ```
-   - This script will clone the sonic-platform-vpp repository (you can edit the script for a specific fork) 2 times, naming one as dev for developing new features, moves the scripts inside a scripts/ folder within the workspace and created backups folder.
+   - This script will create a workspace folder in your $HOME directory, clone the sonic-platform-vpp repository (you can edit the script for a specific fork) 2 times, naming one of them as dev for developing new features (the other one is for building the docker-sonic-vpp image) and create a backups folder.
 
-4. **Prepare Scripts**:
-   - go into the newly created workspace directory and into the scripts folder to install dependencies
-   - Run:
+5. **Install dependencies**:
+   - go to one of the projects **scripts** folder and install all dependencies with 1 script:
         ```sh
+        cd $HOME/workspace/dev/docs/guides/scripts
         ./manage_dependencies.sh --install 
         ```
-	- you can check --help for these scripts if unsure of what to do.
+	- you can check --help for all the scripts  in the folder if unsure of what to do.
 
-5. Go into dev project and build it:
+6. **Build both projects**:
 
    ```sh
       cd $HOME/workspace/dev
       make sonic
    ```
 
-   - the build will probably fail, if it does, go to build/sonic-buildimage/Makefile and change NO_BUSTER = 0 to 1
-   - go back to root of the project and run `make sonic`
-
-6. Go into sonic-platform-vpp project and build it:
-
    ```sh
       cd $HOME/workspace/sonic-platform-vpp
       make sonic
    ```
 
-   - the build will probably fail, if it does, go to build/sonic-buildimage/Makefile and change NO_BUSTER = 0 to 1
-   - go back to root of the project and run `make sonic`
+   - each build will probably fail, if it does, go to build/sonic-buildimage/Makefile and change NO_BUSTER = 0 to 1
+   - go back to root of the project and run `make sonic` again
 
 7. **Monitor Resources (Optional)**:
    - Use the **System Monitor** application in the **Resources** tab to monitor CPU and RAM usage.
-
-
 
 ## Troubleshooting
 ### Issue 1: Build process halts unexpectedly
@@ -73,13 +71,13 @@
 
 #### Solution
 1. **Adjust CPU cores for make jobs**:
-   - Go to the workspace/scripts directory, we'll need the `manage_cores.sh` script:
+   - Depending on which build you do, go into the respective project folder (dev or sonic-platform-vpp), we'll need the `manage_cores.sh` script:
         ```sh
-        cd $HOME/workspace/scripts
+        cd $HOME/workspace/dev/docs/guides/scripts
         ```
-   - Edit the FILE_PATH variable inside the script to match the project path you are building right now
    - Run the script to limit CPU cores used during building process (4-6 is recommended):
         ```sh
+        chmod +x manage_cores.sh
         ./manage_cores.sh --make-jobs <number_of_cores>
         ```
    - To revert changes back to default value (using all the available CPU cores):
@@ -87,9 +85,9 @@
         ./manage_cores.sh --make-jobs-revert
         ```
 2. **Rebuild Project**:
-   - Run the building script (as we already are in the Downloads folder):
+   - Go to the root of the current project (dev or sonic-platform-vpp) and run the build again:
         ```sh
-        ./run_build.sh
+        make sonic
         ```
 ### Issue 2: Build process halts on protobuf tests
 - **Error**: Similar to Issue 1, output shows that 1 test fails.
@@ -97,11 +95,10 @@
 
 #### Solution
 1. **Adjust CPU cores for protobuf tests script**:
-   - Go to the workspace/scripts directory, we'll need the `manage_cores.sh` script:
+   - Depending on which build you do, go into the respective project folder (dev or sonic-platform-vpp), we'll need the `manage_cores.sh` script:
         ```sh
-        cd $HOME/workspace/scripts
+        cd $HOME/workspace/dev/docs/guides/scripts
         ```
-   - Edit the PROTOBUF_TESTS_PATH variable inside the script to match the project path you are building right now
    - Run the script to limit CPU cores used during building process (4-6 is recommended):
         ```sh
         ./manage_cores.sh --protobuf <number_of_cores>
@@ -111,8 +108,8 @@
         ./manage_cores.sh --protobuf-revert
         ```
 2. **Rebuild Project**:
-   - Run the building script (as we already are in the Downloads folder):
+   - Go to the root of the current project (dev or sonic-platform-vpp) and run the build again:
         ```sh
-        ./run_build.sh
+        make sonic
         ```
 
