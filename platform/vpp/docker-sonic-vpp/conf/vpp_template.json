@@ -42,7 +42,8 @@
 	    "af_packet_plugin.so": "enable",
 	    "dpdk_plugin.so": "enable",
 	    "linux_cp_plugin.so": "enable",
-	    "linux_nl_plugin.so": "enable"
+	    "linux_nl_plugin.so": "enable",
+		"vxlan_plugin.so": "enable"
 	}
     },
     "logging": {

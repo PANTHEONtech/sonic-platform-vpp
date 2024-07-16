@@ -43,6 +43,18 @@
     sai_status_t _status = (status);                            \
     if (_status != SAI_STATUS_SUCCESS) { SWSS_LOG_ERROR("ERROR status %d", status); return _status; } }
 
+typedef struct _vpp_vxlan_tunnel{
+    std::string underlay_interface;
+
+    sai_ip_address_t src_ip;
+    sai_ip_address_t dst_addr;
+    std::pair<uint16_t,uint16_t> vni_vrf_pair;
+    std::map<uint32_t,uint16_t> vni_vlan_map;
+
+    bool initialized;
+
+} vpp_vxlan_vtep_tunnel_t;
+
 typedef struct vpp_ace_cntr_info_ {
     sai_object_id_t tbl_oid;
     sai_object_id_t ace_oid;
@@ -145,7 +157,14 @@ namespace saivpp
 
 	    sai_status_t vpp_dp_initialize();
             sai_status_t vpp_create_default_1q_bridge();
-
+        sai_status_t createTunnel(
+                _In_ sai_object_id_t object_id,
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+        sai_status_t createVxlanTunnel(
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
 	    sai_status_t createVlanMember(
 		    _In_ sai_object_id_t object_id,
 		    _In_ sai_object_id_t switch_id,
@@ -163,6 +182,42 @@ namespace saivpp
                     _In_ const sai_attribute_t *attr_list);
             sai_status_t vpp_delete_bvi_interface(
                     _In_ sai_object_id_t bvi_obj_id);
+        /*FDB Entry and Flush SAI Objects*/
+        sai_status_t FdbEntryadd(
+                _In_ const std::string &serializedObjectId,
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+        sai_status_t vpp_fdbentry_add(
+                _In_ const std::string &serializedObjectId,
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+        sai_status_t FdbEntrydel(
+                _In_ const std::string &serializedObjectId);
+        sai_status_t vpp_fdbentry_del(
+                _In_ const std::string &serializedObjectId);
+
+        sai_status_t vpp_fdbentry_flush(
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+
+        /* BFD Session */
+        sai_status_t bfd_session_add(
+                _In_ const std::string &serializedObjectId,
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+        sai_status_t vpp_bfd_session_add(
+                _In_ const std::string &serializedObjectId,
+                _In_ sai_object_id_t switch_id,
+                _In_ uint32_t attr_count,
+                _In_ const sai_attribute_t *attr_list);
+        sai_status_t bfd_session_del(
+                _In_ const std::string &serializedObjectId);
+        sai_status_t vpp_bfd_session_del(
+                _In_ const std::string &serializedObjectId);
         protected:
 
             virtual sai_status_t create_port_dependencies(
@@ -1041,5 +1096,12 @@ namespace saivpp
             std::map<std::string, std::shared_ptr<HostInterfaceInfo>> m_hostif_info_map;
 
             std::shared_ptr<RealObjectIdManager> m_realObjectIdManager;
+
+            std::shared_ptr<std::thread> m_tunnel_thread;
+            // Seems like only one vxlan tunnel can be enstablished
+            std::shared_ptr<vpp_vxlan_vtep_tunnel_t> m_vxlan_tunnel;
+
     };
 }
+
+

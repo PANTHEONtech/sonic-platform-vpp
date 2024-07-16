@@ -1,3 +1,4 @@
+
 /*
  * Copyright 2016 Microsoft, Inc.
  * Modifications copyright (c) 2023 Cisco and/or its affiliates.
@@ -23,8 +24,11 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <swss/exec.h>
 
 #define SAI_VPP_MAX_PORTS 1024
+
+#include "vppxlate/SaiVppXlate.h"
 
 using namespace saivpp;
 
@@ -252,7 +256,51 @@ sai_status_t SwitchStateBase::create(
        sai_deserialize_object_id(serializedObjectId, object_id);
        return createVlanMember(object_id, switch_id, attr_count, attr_list);
     }
+    if (object_type == SAI_OBJECT_TYPE_FDB_ENTRY)
+    {
+        return FdbEntryadd(serializedObjectId, switch_id, attr_count, attr_list);
+    }
+    if (object_type == SAI_OBJECT_TYPE_BFD_SESSION)
+    {
+        return bfd_session_add(serializedObjectId, switch_id, attr_count, attr_list);
+    }
+    if (object_type == SAI_OBJECT_TYPE_TUNNEL)
+    {
+        sai_object_id_t object_id;
+        sai_deserialize_object_id(serializedObjectId, object_id);
+        CHECK_STATUS(create_internal(SAI_OBJECT_TYPE_TUNNEL, serializedObjectId, switch_id, attr_count, attr_list));
+        return createTunnel(object_id, switch_id, attr_count, attr_list);
 
+    }
+    if (object_type == SAI_OBJECT_TYPE_TUNNEL_MAP)
+    {
+        sai_object_id_t object_id;
+        sai_deserialize_object_id(serializedObjectId, object_id);
+        SWSS_LOG_INFO("SSB:CREATE %s","SAI_OBJECT_TYPE_TUNNEL_MAP");
+    }
+    if (object_type == SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY)
+    {
+        //SAI_TUNNEL_MAP_ENTRY_ATTR_TUNNEL_MAP_TYPE == sai_tunnel_type_t SAI_TUNNEL_TYPE_VXLAN
+        //SAI_TUNNEL_MAP_ENTRY_ATTR_TUNNEL_MAP == sai_object_id_t
+        //SAI_TUNNEL_MAP_ENTRY_ATTR_VLAN_ID_VALUE == sai_uint16_t !!! condition
+        //SAI_TUNNEL_MAP_ENTRY_ATTR_VNI_ID_KEY == sai_uint32_t !!! condition
+        sai_object_id_t object_id;
+        sai_deserialize_object_id(serializedObjectId, object_id);
+        SWSS_LOG_INFO("SSB:CREATE %s","SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY");
+        for (uint32_t idx = 0; idx < attr_count; idx++) {
+            auto attr = &attr_list[idx];
+
+            SWSS_LOG_INFO("SSB::CreateTunnel ATTR: %s", sai_metadata_get_attr_metadata(SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY,attr->id)->attridname);
+        }
+    }
+    if (object_type == SAI_OBJECT_TYPE_TUNNEL_TERM_TABLE_ENTRY)
+    {
+
+        sai_object_id_t object_id;
+        sai_deserialize_object_id(serializedObjectId, object_id);
+
+
+    }
     return create_internal(object_type, serializedObjectId, switch_id, attr_count, attr_list);
 }
 
@@ -526,6 +574,14 @@ sai_status_t SwitchStateBase::remove(
         sai_object_id_t objectId;
         sai_deserialize_object_id(serializedObjectId, objectId);
         return removeVlanMember(objectId);
+    }
+    else if (object_type == SAI_OBJECT_TYPE_FDB_ENTRY)
+    {
+        return FdbEntrydel(serializedObjectId);
+    }
+    else if (object_type == SAI_OBJECT_TYPE_BFD_SESSION)
+    {
+        return bfd_session_del(serializedObjectId);
     }
 
     return remove_internal(object_type, serializedObjectId);
@@ -3786,4 +3842,126 @@ sai_status_t SwitchStateBase::queryAttrEnumValuesCapability(
         return queryNextHopGroupTypeCapability(enum_values_capability);
     }
     return SAI_STATUS_NOT_SUPPORTED;
+}
+sai_status_t SwitchStateBase::createTunnel(
+        _In_ sai_object_id_t object_id,
+        _In_ sai_object_id_t switch_id,
+        _In_ uint32_t attr_count,
+        _In_ const sai_attribute_t *attr_list)
+{
+    for (uint32_t idx = 0; idx < attr_count; idx++) {
+        auto attr = &attr_list[idx];
+
+        SWSS_LOG_INFO("SSB::CreateTunnel ATTR: %s", sai_metadata_get_attr_metadata(SAI_OBJECT_TYPE_TUNNEL,attr->id)->attridname);
+    }
+
+    auto attr_type = sai_metadata_get_attr_by_id(SAI_TUNNEL_ATTR_TYPE,attr_count,attr_list);
+    sai_status_t status;
+    switch (attr_type->value.s32) {
+        case SAI_TUNNEL_TYPE_VXLAN:
+            SWSS_LOG_INFO("SSB::CreateTunnel COOL!!! Here we go");
+            status = createVxlanTunnel(attr_count,attr_list);
+            break;
+        default:
+            SWSS_LOG_INFO("SSB::CreateTunnel TunnelType (%s) NOT IMPLEMENTED",sai_metadata_get_tunnel_type_name(
+                    static_cast<sai_tunnel_type_t>(attr_type->value.s32)));
+            status = SAI_STATUS_NOT_IMPLEMENTED;
+    }
+    return status;
+
+}
+
+sai_status_t SwitchStateBase::createVxlanTunnel(
+        _In_ uint32_t attr_count,
+        _In_ const sai_attribute_t *attr_list)
+{
+    auto attr_peer_type = sai_metadata_get_attr_by_id(SAI_TUNNEL_ATTR_PEER_MODE,attr_count,attr_list)->value.s32;
+    if (attr_peer_type == SAI_TUNNEL_PEER_MODE_P2P){
+
+    } else
+    {
+        SWSS_LOG_ERROR("SAI_TUNNEL_PEER_MODE_P2MP not implemented right now");
+
+        return SAI_STATUS_SUCCESS;
+
+    }
+    // Objects SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY and SAI_OBJECT_TYPE_TUNNEL_TERM_TABLE_ENTRY should be available to continue
+    auto notFound = m_objectHash.find(SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY);
+
+    if (notFound == m_objectHash.end()){
+        SWSS_LOG_ERROR("No tunnel map entries available");
+        return SAI_STATUS_FAILURE;
+    }
+
+    auto map_entry_list = m_objectHash.at(SAI_OBJECT_TYPE_TUNNEL_MAP_ENTRY);
+    m_vxlan_tunnel = std::make_shared<vpp_vxlan_vtep_tunnel_t >();
+
+    for (auto entry : map_entry_list){
+    m_vxlan_tunnel->vni_vlan_map.insert(
+            std::pair<uint32_t,uint16_t>(
+            (uint32_t)entry.second.at("SAI_TUNNEL_MAP_ENTRY_ATTR_VNI_ID_KEY")->getAttr()->value.u32,
+            (uint16_t)entry.second.at("SAI_TUNNEL_MAP_ENTRY_ATTR_VLAN_ID_VALUE")->getAttr()->value.u16
+            )
+            );
+    }
+    //works only for P2P
+    auto src_ip = sai_metadata_get_attr_by_id(SAI_TUNNEL_ATTR_ENCAP_SRC_IP,attr_count,attr_list)->value.ipaddr.addr.ip4;
+    auto dst_ip = sai_metadata_get_attr_by_id(SAI_TUNNEL_ATTR_ENCAP_DST_IP,attr_count,attr_list)->value.ipaddr.addr.ip4;
+
+
+    auto ret = create_vxlan_tunnel(false,src_ip,dst_ip,1000,0);
+    SWSS_LOG_INFO("create_vxlan_tunnel() returned: %d",ret);
+    //
+    std::stringstream cmd;
+    std::string res;
+    cmd << "vppctl binary-api dump_interface_table" ;
+    ret = swss::exec(cmd.str(), res);
+    if (ret)
+    {
+        SWSS_LOG_ERROR("Command '%s' failed with rc %d", cmd.str().c_str(), ret);
+        return false;
+    }
+    SWSS_LOG_INFO("%s",res.c_str());
+
+    //
+    refresh_interfaces_list();
+    SWSS_LOG_INFO("Interfaces list refreshed");
+
+
+    //Create bridge and set the l2 port
+    const char *hw_ifname = "vxlan_tunnel0";
+    uint32_t bridge_id = 100;
+    //uint32_t vlan_id = 100;
+    set_sw_interface_l2_bridge_v2(hw_ifname, bridge_id, true, VPP_API_PORT_TYPE_NORMAL, true);
+    set_bridge_domain_flags(bridge_id,VPP_BD_FLAG_LEARN,true);
+    set_bridge_domain_flags(bridge_id,VPP_BD_FLAG_FWD,true);
+    set_bridge_domain_flags(bridge_id,VPP_BD_FLAG_FLOOD,true);
+    set_bridge_domain_flags(bridge_id,VPP_BD_FLAG_LEARN,true);
+    SWSS_LOG_NOTICE("set_sw_interface_l2_bridge()");
+    SWSS_LOG_INFO("Creating FDB ENTRY");
+
+   // sai_attribute_t attr;
+
+    //attr.id = SAI_FDB_ENTRY_ATTR_TYPE;
+    //attr.value.s32 = SAI_FDB_ENTRY_TYPE_DYNAMIC;
+
+
+    sai_mac_t mac = {1,1,0,0,0,0};
+
+    sai_fdb_entry_t fe;
+
+    fe.switch_id = m_switch_id;
+    fe.bv_id = m_default_1q_bridge;
+    memcpy(fe.mac_address, mac, sizeof(sai_mac_t));
+
+    //sai_metadata_sai_fdb_api->create_fdb_entry(&fe, 1, &attr);
+    //SWSS_LOG_INFO("Creating FDB ENTRY ATTRIBUTE");
+    //attr.id = SAI_FDB_ENTRY_ATTR_BRIDGE_PORT_ID;
+    //attr.value.oid = 0;
+
+    //sai_metadata_sai_fdb_api->set_fdb_entry_attribute(&fe, &attr);
+
+
+    return SAI_STATUS_SUCCESS;
+
 }
