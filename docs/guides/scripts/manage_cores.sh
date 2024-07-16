@@ -35,8 +35,9 @@ check_command "sed"
 check_command "nproc"
 
 # File paths (rename for the correct path)
-FILE_PATH="$HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/rules/config"
-PROTOBUF_TESTS_PATH="$HOME/workspace/sonic-platform-vpp/build/sonic-buildimage/src/protobuf/protobuf-3.21.12/tests.sh"
+ROOT=$(git rev-parse --show-toplevel)
+FILE_PATH="$ROOT/build/sonic-buildimage/rules/config"
+PROTOBUF_TESTS_PATH="$ROOT/build/sonic-buildimage/src/protobuf/protobuf-3.21.12/tests.sh"
 
 MAX_CORES=$(nproc)
 

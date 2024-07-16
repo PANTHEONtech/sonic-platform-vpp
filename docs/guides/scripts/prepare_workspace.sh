@@ -20,12 +20,6 @@ if [ ! -d "dev" ]; then
 fi
 
 if [ ! -d "backups" ]; then
-  echo "Directory 'backups' not found. Cloning the repository..."
+  echo "Directory 'backups' not found. Creating the directory..."
   mkdir backups
-fi
-
-if [ ! -d "scripts" ]; then
-  echo "Directory 'dev' not found. Cloning the repository..."
-  mkdir scripts
-  mv $HOME/Downloads/*.sh scripts/
 fi
